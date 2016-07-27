@@ -1,0 +1,36 @@
+* mysql-4.1.1
+program description:
+---------------------
+Open source Database Server 
+(The code is downloaded from MySQL website)
+
+bug explanation:
+--------------------
+Atomicity violation (Data Race)
+(Refer to http://bugs.mysql.com/bug.php?id=2011)
+sql/slave.cc; in function next_event
+
+in function next_event, around line 4044, there is a 'check_binlog_magic'.
+This function call and preceding part of this function should not be 
+interleaved by conflicting access from other threads. However, they are
+not properly protected into one critical section and may be interleaved.
+The interleaving may cause server crash.
+
+bug triggering input:
+---------------------
+To ease repeating the bug, you can add a 'sleep' right before the
+check_binlog_magic in the next_event function. 
+
+Then run the rpl_max_relay_size.test:
+./mysql-test-run rpl_max_relay_size.test
+
+Afte a while, you will probably get error information and be informed that 
+'could not sync with master' and 'Aborting: rpl_max_relay_size failed'.
+This means you have triggered the bug and crashed the server.
+
+correct inputs:
+--------------------
+too many
+
+bug detection preliminary results:
+--------------------

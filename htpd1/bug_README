@@ -1,0 +1,61 @@
+* httpd-2.0.48
+program description:
+---------------------
+Open source Apache HTTP Server
+(The code is downloaded from apache website)
+
+bug explanation:
+--------------------
+Data Race (Atomicity Violation)
+modules/loggers/mod_log_config.c; in function ap_buffered_log_writer
+
+static apr_status_t ap_buffered_log_writer(..,void *handle,..)
+{
+  ...
+  buffered_log *buf = (buffered_log*)handle;
+  ...
+  for (i = 0, s = &buf->outbuf[buf->outcnt]; i < nelts; ++i) {
+            memcpy(s, strs[i], strl[i]);
+            s += strl[i];
+  }
+  buf->outcnt += len;
+  ...
+}
+
+In above code, the application tries to append new information to the log 
+buffer (buf), and update the buffer index (buf->outcnt) afterwards. However,
+since the buffer writing action and the buffer index update action are not
+properly protected into one critical action. It is possible that: two threads
+both write to the buffer and interfere with each other's buffer index update.
+As a result, the server log (buf) is corrupted.
+
+Furthermore, the line 'buf->outcnt += len' is a typical data race. Thinking it as
+temp = buf->outcnt;
+buf->outcnt = temp+len;
+Interleaving above two sentences will similarly cause server log corrupted.
+
+How to repeat the bug:
+---------------------
+1. You can add sleep or yield before above 'buf->outcnt += len' code in the 
+function ¡°ap_buffered_log_writer¡± of the file ¡°modules/loggers/mod_log_config.c¡±
+to ease the bug repeat. Code range is around line 1363.
+2. Configure the httpd-2.0.48 as follows: ¡°./configure --prefix = ¡­ --with-mpm=worker¡±
+  , build and install the httpd.
+3. add one line to the configuration file ¡°conf/httpd.conf¡±: ¡°BufferedLogs on¡±
+4. then use two clients to fetch different files. For example, you can issue 
+  following two httperf requests
+  1) ./httperf  --server=<your server name>  --uri=/index.html.cz.iso8859-2 \
+  --num-conns=100 --num-calls=100
+  2) ¡°./httperf  --server=<your server name>  --uri=/index.html.en \
+  --num-conns=100 --num-calls=100
+
+If the bug is triggered, you¡¯ll see the garbage in the access log file 
+¡°logs/access_log¡±
+
+correct inputs:
+--------------------
+too many
+
+bug detection preliminary results:
+--------------------
+This bug can be detected by traditional race detectors.

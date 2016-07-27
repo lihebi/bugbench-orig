@@ -1,0 +1,55 @@
+* CVS 1.11.4
+program description:
+---------------------
+Open source Version Control Software
+(The code is downloaded from GNU website)
+
+bug explanation:
+--------------------
+double free
+a static pointer: dir_name, it is freed and reallocated in
+src/server.c line 992. The problem of following code is: even if
+freeed, the dir_name is not set to NULL, so next time, it will be
+freed again
+buggy code:
+static void dirswitch (dir, repos)
+    char *dir;
+    char *repos;
+{
+  ...
+ if (dir_name != NULL)
+    free (dir_name);
+  ...
+  dir_name = xmalloc(...)
+  ...
+}
+
+
+bug triggering input:
+---------------------
+Two choices:
+One: look at the exploiting code in exploit-cvs.c
+
+or 
+
+Two: try following after logged into cvs, issue the following commands to cvs 
+repeatedly for several times, bug will be triggered.
+	     Argument Crhi\n
+	     Argument $mod_name\n
+	     Directory .\n
+	     $cvsroot\n
+	     export\n
+
+	     Directory t2\n
+	     $cvsroot\n
+	     Directory ./\n
+	     $cvsroot\n
+	     noop\n
+
+correct inputs:
+--------------------
+too many
+
+bug detection preliminary results:
+--------------------
+Purify and Valgrind can both catch the bug

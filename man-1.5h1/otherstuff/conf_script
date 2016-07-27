@@ -1,0 +1,74 @@
+#!/bin/sh
+infiles=$@
+trap 'rm -f $infiles; exit 1' 1 3 15
+
+# echo ""
+for infile in $infiles
+do
+  case $infile in
+  *.h)
+    cb="/*"; cs=" *"; ce=" */";;
+  *.1|*.5|*.8|*.man)
+    cb=.\\\"; cs=.\\\"; ce=.\\\";;
+  *)
+    cb="#"; cs="#"; ce="#";;
+  esac
+  echo "$cb"                                                    > $infile
+  echo "$cs Generated automatically from $infile.in by the"     >> $infile
+  echo "$cs configure script."                                  >> $infile
+  echo "$ce"                                                    >> $infile
+  echo "Creating $infile from $infile.in"
+  sed -e '
+s,@version@,man-1.5h,
+s,@CC@,gcc -O,
+s,@INSTALL@,install,
+s,@DEFS@, -DSTDC_HEADERS -DPOSIX -DDO_COMPRESS,
+s,@LIBS@,,
+s,@LIBOBJS@,,
+s,@troff@,/usr/bin/groff -Tps -mandoc,
+s,@nroff@,/usr/bin/groff -Tlatin1 -mandoc,
+s,@eqn@,/usr/bin/geqn -Tps,
+s,@neqn@,/usr/bin/geqn -Tlatin1,
+s,@tbl@,/usr/bin/gtbl,
+s,@nocol@,# ,
+s,@pcol@,,
+s,@col@,/usr/bin/col,
+s,@vgrind@,,
+s,@refer@,/usr/bin/grefer,
+s,@grap@,,
+s,@pic@,/usr/bin/gpic,
+s,@fcat@,,
+s,@pcat@,,
+s,@zcat@,/bin/zcat,
+s,@gunzip@,/usr/bin/gunzip -c,
+s,@bzip2@,/usr/bin/bzip2 -c -d,
+s,@unyabba@,,
+s,@compress@,/bin/gzip,
+s,@compress_ext@,.gz,
+s,@decompress@,/usr/bin/gunzip -c,
+s,@pager@,/usr/bin/less -is,
+s,@cmp@,/usr/bin/cmp -s,
+s,@cat@,/bin/cat,
+s,@gawk@,/usr/bin/gawk,
+s,@bindir@,/usr/bin,
+s,@mandir@,/usr/share/man,
+s,@locale@,,
+s,@fhs@,,
+s,@fsstnd@,# ,
+s,@man1ext@,1,g
+s,@man5ext@,5,g
+s,@man8ext@,8,g
+s,@man_install_flags@,,
+s,@man_user@,,
+s,@languages@,en,
+s,@man@,/usr/bin/man,
+s,@apropos@,/usr/bin/apropos,
+s,@whatis@,/usr/bin/whatis,
+s,@makewhatis@,/usr/sbin/makewhatis,
+s,@man_config_dir@,/usr/share/misc,
+s,@man_config_file@,/usr/share/misc/man.conf,
+s,@manpathoption@,--path,
+s,@grepsilent@,q,
+s/@sections@/1:8:2:3:4:5:6:7:9:tcl:n:l:p:o/
+' $infile.in >> $infile
+done

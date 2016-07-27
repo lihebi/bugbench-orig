@@ -1,0 +1,54 @@
+* mysql 3.23.56
+program description:
+---------------------
+Open source Database Server
+(The code is downloaded from mysql website)
+
+bug explanation:
+--------------------
+Atomicity violation
+(Refer to http://bugs.mysql.com/bug.php?id=169)
+sql_delete.cc; in function generate_table
+
+int generate_table(THD *thd, TABLE_LIST *table_list, TABLE *locked_table)
+{
+  //table generation work
+  ...
+  mysql_update_log.write(...)
+  ...
+}
+
+In this function, it first generate a table, a optimization of delete all rows 
+in a table. This generation itself is done with good locking, checking, etc. 
+After the table generation, around line 109, and AFTER it release ALL the locks,
+the code tries to log this table generation action into binlog (the database 
+log used for recovery,etc). 
+Note that, the table generation and the logging is NOT put in any atomic
+critical section. Therefore they may be interleaved by other binlog updating.
+As a result, the binlog may not match the actual database execution order, which
+would cause both security and potential availability issues.
+
+bug triggering input:
+---------------------
+Adding 'sleep(x)' right before the mysql_update_log.write (around line 108)
+can make the bug easily repeated.
+
+0. install the mysql
+1. launch mysql server
+*. suppose we have a table named 'b' with schema: (id int) in database 'test'
+2. at client site quickly type in following two requests
+> ./mysql -u root -D test -e 'delete from b' &
+> ./mysql -u root -D test -e 'insert into b values (1)' &
+3. wait after above two actions finish and check the binlog by
+> ./mysqlbinlog <binlog file>
+  You will see detection log entry and the insert log entry has disordered
+  binlog index.
+
+correct inputs:
+--------------------
+too many
+
+bug detection preliminary results:
+--------------------
+This atomicity bug involves actions on two different objects.
+We expect this to be very difficult to detect by traditional race detectors.

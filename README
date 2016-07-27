@@ -1,0 +1,33 @@
+::bc::::::::::
+refer to bc-1.06/readme/bug_README
+two heap buffer overflow
+one static fixed-length array overflow
+::gzip::::::::
+gzip-1.2.4/readme/bug_README
+global array overflow
+::man:::::::::
+man-1.5h1/readme/bug_README
+Static stack array overflow bug
+::ncompress:::
+ncompress/readme/bug_README
+Stack array overflow bug
+::polymorph:::
+polymorph-0.4.0/readme/bug_README
+global array overflow and Stack array overflow bug
+::squid::::
+squid-2.3/bug_README
+heap overflow
+::CVS::::::
+cvs-1.11.4/bug_README
+double free bug
+::htpd1::::
+htpd1/bug_README
+data race bug
+::mysql1:::
+TODO????
+::mysql2:::
+mysql2/bug_README
+Atomicity violation bug
+::mysql3:::
+mysql3/bug_README
+Atomicity violation (datarace bug)
